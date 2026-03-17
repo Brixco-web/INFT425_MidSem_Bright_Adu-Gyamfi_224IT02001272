@@ -31,7 +31,6 @@ class _TaskListScreenState extends State<TaskListScreen> {
         _tasks.clear();
         _tasks.addAll(decoded.map((item) => Task.fromJson(item)).toList());
       } else {
-        // Fallback: Hardcoded list
         _tasks.addAll([
           Task(
             title: 'Midsem Exam Preparation',
@@ -69,44 +68,62 @@ class _TaskListScreenState extends State<TaskListScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Add New Task'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Add New Task', style: TextStyle(fontWeight: FontWeight.bold)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: titleController,
-                decoration: const InputDecoration(labelText: 'Task Title'),
-              ),
-              TextField(
-                controller: courseController,
-                decoration: const InputDecoration(labelText: 'Course Code'),
+                decoration: InputDecoration(
+                  labelText: 'Task Title',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Text(
-                    selectedDate == null
-                        ? 'No Date Chosen'
-                        : DateFormat('dd/MM/yyyy').format(selectedDate!),
+              TextField(
+                controller: courseController,
+                decoration: InputDecoration(
+                  labelText: 'Course Code',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: () async {
+                  final pickedDate = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime(2101),
+                  );
+                  if (pickedDate != null) {
+                    setDialogState(() {
+                      selectedDate = pickedDate;
+                    });
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade400),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () async {
-                      final pickedDate = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime(2101),
-                      );
-                      if (pickedDate != null) {
-                        setDialogState(() {
-                          selectedDate = pickedDate;
-                        });
-                      }
-                    },
-                    child: const Text('Choose Date'),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_today, size: 20, color: Colors.blue.shade800),
+                      const SizedBox(width: 12),
+                      Text(
+                        selectedDate == null
+                            ? 'Select Due Date'
+                            : DateFormat('dd/MM/yyyy').format(selectedDate!),
+                        style: TextStyle(
+                          color: selectedDate == null ? Colors.grey.shade600 : Colors.black,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ],
           ),
@@ -131,7 +148,12 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   Navigator.pop(context);
                 }
               },
-              child: const Text('Add'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade800,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Add Task'),
             ),
           ],
         ),
@@ -142,57 +164,111 @@ class _TaskListScreenState extends State<TaskListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Tasks'),
+        title: const Text('My Tasks', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: Colors.black,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _tasks.isEmpty
-              ? const Center(child: Text('No tasks yet!'))
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.task_outlined, size: 80, color: Colors.grey.shade300),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No tasks yet!',
+                        style: TextStyle(fontSize: 18, color: Colors.grey.shade500),
+                      ),
+                    ],
+                  ),
+                )
               : ListView.builder(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   itemCount: _tasks.length,
                   itemBuilder: (context, index) {
                     final task = _tasks[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.shade200,
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          )
+                        ],
                       ),
                       child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                         title: Text(
                           task.title,
                           style: TextStyle(
                             decoration: task.isComplete ? TextDecoration.lineThrough : null,
                             fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: task.isComplete ? Colors.grey : Colors.black87,
                           ),
                         ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(task.courseCode),
-                            Text(
-                              DateFormat('dd/MM/yyyy').format(task.dueDate),
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ],
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  task.courseCode,
+                                  style: TextStyle(
+                                    color: Colors.blue.shade800,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Icon(Icons.access_time_rounded, size: 14, color: Colors.grey.shade500),
+                              const SizedBox(width: 4),
+                              Text(
+                                DateFormat('dd/MM/yyyy').format(task.dueDate),
+                                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
                         ),
-                        trailing: Checkbox(
-                          value: task.isComplete,
-                          onChanged: (value) {
-                            setState(() {
-                              task.isComplete = value ?? false;
-                            });
-                            _saveTasks();
-                          },
+                        trailing: Transform.scale(
+                          scale: 1.2,
+                          child: Checkbox(
+                            value: task.isComplete,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                            activeColor: Colors.blue.shade800,
+                            onChanged: (value) {
+                              setState(() {
+                                task.isComplete = value ?? false;
+                              });
+                              _saveTasks();
+                            },
+                          ),
                         ),
                       ),
                     );
                   },
                 ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddTaskDialog,
-        child: const Icon(Icons.add),
+        backgroundColor: Colors.blue.shade800,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('New Task'),
       ),
     );
   }

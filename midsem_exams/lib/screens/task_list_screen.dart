@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/task.dart';
 
 class TaskListScreen extends StatefulWidget {
@@ -10,23 +12,53 @@ class TaskListScreen extends StatefulWidget {
 }
 
 class _TaskListScreenState extends State<TaskListScreen> {
-  final List<Task> _tasks = [
-    Task(
-      title: 'Midsem Exam Preparation',
-      courseCode: 'INFT 425',
-      dueDate: DateTime.now().add(const Duration(days: 2)),
-    ),
-    Task(
-      title: 'Database Design Project',
-      courseCode: 'INFT 421',
-      dueDate: DateTime.now().add(const Duration(days: 5)),
-    ),
-    Task(
-      title: 'Mobile App Logic',
-      courseCode: 'INFT 425',
-      dueDate: DateTime.now().add(const Duration(days: 1)),
-    ),
-  ];
+  final List<Task> _tasks = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTasks();
+  }
+
+  Future<void> _loadTasks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? tasksJson = prefs.getString('tasks');
+    
+    setState(() {
+      if (tasksJson != null) {
+        final List<dynamic> decoded = jsonDecode(tasksJson);
+        _tasks.clear();
+        _tasks.addAll(decoded.map((item) => Task.fromJson(item)).toList());
+      } else {
+        // Fallback: Hardcoded list
+        _tasks.addAll([
+          Task(
+            title: 'Midsem Exam Preparation',
+            courseCode: 'INFT 425',
+            dueDate: DateTime.now().add(const Duration(days: 2)),
+          ),
+          Task(
+            title: 'Database Design Project',
+            courseCode: 'INFT 421',
+            dueDate: DateTime.now().add(const Duration(days: 5)),
+          ),
+          Task(
+            title: 'Mobile App Logic',
+            courseCode: 'INFT 425',
+            dueDate: DateTime.now().add(const Duration(days: 1)),
+          ),
+        ]);
+      }
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _saveTasks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String encoded = jsonEncode(_tasks.map((task) => task.toJson()).toList());
+    await prefs.setString('tasks', encoded);
+  }
 
   void _showAddTaskDialog() {
     final titleController = TextEditingController();
@@ -95,6 +127,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                       dueDate: selectedDate!,
                     ));
                   });
+                  _saveTasks();
                   Navigator.pop(context);
                 }
               },
@@ -112,48 +145,51 @@ class _TaskListScreenState extends State<TaskListScreen> {
       appBar: AppBar(
         title: const Text('Tasks'),
       ),
-      body: _tasks.isEmpty
-          ? const Center(child: Text('No tasks yet!'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(8),
-              itemCount: _tasks.length,
-              itemBuilder: (context, index) {
-                final task = _tasks[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ListTile(
-                    title: Text(
-                      task.title,
-                      style: TextStyle(
-                        decoration: task.isComplete ? TextDecoration.lineThrough : null,
-                        fontWeight: FontWeight.bold,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _tasks.isEmpty
+              ? const Center(child: Text('No tasks yet!'))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(8),
+                  itemCount: _tasks.length,
+                  itemBuilder: (context, index) {
+                    final task = _tasks[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(task.courseCode),
-                        Text(
-                          DateFormat('dd/MM/yyyy').format(task.dueDate),
-                          style: const TextStyle(fontSize: 12),
+                      child: ListTile(
+                        title: Text(
+                          task.title,
+                          style: TextStyle(
+                            decoration: task.isComplete ? TextDecoration.lineThrough : null,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ],
-                    ),
-                    trailing: Checkbox(
-                      value: task.isComplete,
-                      onChanged: (value) {
-                        setState(() {
-                          task.isComplete = value ?? false;
-                        });
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(task.courseCode),
+                            Text(
+                              DateFormat('dd/MM/yyyy').format(task.dueDate),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ],
+                        ),
+                        trailing: Checkbox(
+                          value: task.isComplete,
+                          onChanged: (value) {
+                            setState(() {
+                              task.isComplete = value ?? false;
+                            });
+                            _saveTasks();
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddTaskDialog,
         child: const Icon(Icons.add),

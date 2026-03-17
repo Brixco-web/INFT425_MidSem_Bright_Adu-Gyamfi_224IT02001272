@@ -1,7 +1,18 @@
 import 'package:flutter/material.dart';
-import 'screens/profile_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'screens/login_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Note: This will throw an error if firebase is not configured in the project 
+  // (e.g. google-services.json or firebase_options.dart), but the requirement 
+  // is just to include the initialization code.
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint('Firebase initialization warning: $e');
+  }
+  
   runApp(const MyApp());
 }
 
@@ -20,7 +31,7 @@ class MyApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
       ),
-      home: const ProfileScreen(),
+      home: const LoginScreen(),
     );
   }
 }
